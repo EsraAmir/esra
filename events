@@ -1,1 +1,306 @@
+import tkinter as tk
+from tkinter import ttk
+import pickle
+from tkinter import simpledialog
 
+class Event:
+    def __init__(self, event_id, title, date, location, client_id, guest_list, suppliers):
+        self.event_id = event_id
+        self.title = title
+        self.date = date
+        self.location = location
+        self.client_id = client_id
+        self.guest_list = guest_list
+        self.suppliers = suppliers
+
+
+
+class EventManagement(tk.Tk):
+    def __init__(self):
+        super().__init__()
+        
+
+        
+
+        self.load_data()
+
+       
+
+
+
+    
+
+    def load_data(self):
+           
+
+            try:
+                with open("events.pkl", "rb") as file:
+                    self.events = pickle.load(file)
+            except FileNotFoundError:
+                self.events = [
+                    Event("1", "Event 1", "2024-05-01", "Location 1", "1", ["Guest 1", "Guest 2"], ["Supplier 1", "Supplier 2"]),
+                    Event("2", "Event 2", "2024-05-15", "Location 2", "2", ["Guest 3", "Guest 4"], ["Supplier 3", "Supplier 4"]),
+                    Event("3", "Event 3", "2024-06-01", "Location 3", "3", ["Guest 5", "Guest 6"], ["Supplier 5", "Supplier 6"])
+                ]
+    def save_data(self):
+            with open("events.pkl", "wb") as file:
+                pickle.dump(self.events, file)    
+
+    def manage_events(self):
+        self.clear_widgets()
+
+        self.event_label = tk.Label(self, text="Manage Events", font=("Helvetica", 14))
+        self.event_label.pack(pady=10)
+
+        self.event_tree = ttk.Treeview(self)
+        self.event_tree["columns"] = ("Event ID", "Title", "Date", "Location", "Client ID", "Guest List", "Suppliers")
+
+        self.event_tree.column("#0", width=100)  
+        self.event_tree.column("Event ID", width=50)
+        self.event_tree.column("Title", width=100)
+        self.event_tree.column("Date", width=100)
+        self.event_tree.column("Location", width=150)
+        self.event_tree.column("Client ID", width=70)
+        self.event_tree.column("Guest List", width=120)
+        self.event_tree.column("Suppliers", width=120)
+
+        self.event_tree.pack(fill=tk.BOTH, expand=True, padx=10, pady=10)
+
+        self.event_tree.heading("#0", text="Event Details")
+        self.event_tree.heading("Event ID", text="Event ID")
+        self.event_tree.heading("Title", text="Title")
+        self.event_tree.heading("Date", text="Date")
+        self.event_tree.heading("Location", text="Location")
+        self.event_tree.heading("Client ID", text="Client ID")
+        self.event_tree.heading("Guest List", text="Guest List")
+        self.event_tree.heading("Suppliers", text="Suppliers")
+
+        for event in self.events:
+            self.event_tree.insert("", tk.END, text=event.title,
+                                    values=(event.event_id, event.title, event.date, event.location,
+                                            event.client_id, ", ".join(event.guest_list), ", ".join(event.suppliers)))
+        
+        self.event_tree.pack(fill=tk.BOTH, expand=True, padx=10, pady=10)
+
+        scroll_y = ttk.Scrollbar(self, orient="vertical", command=self.event_tree.yview)
+        scroll_y.pack(side="right", fill="y")
+        self.event_tree.configure(yscrollcommand=scroll_y.set)
+
+        scroll_x = ttk.Scrollbar(self, orient="horizontal", command=self.event_tree.xview)
+        scroll_x.pack(side="bottom", fill="x")
+        self.event_tree.configure(xscrollcommand=scroll_x.set)
+
+        self.display_event_button = tk.Button(self, text="Display Event Details", command=self.display_event_details)
+        self.display_event_button.pack(pady=5)
+
+        self.add_event_button = tk.Button(self, text="Add Event", command=self.add_event)
+        self.add_event_button.pack(pady=5)
+
+        self.edit_button = tk.Button(self, text="Edit", command=self.edit_selected_event)
+        self.edit_button.pack()
+
+        self.delete_button = tk.Button(self, text="Delete", command=self.delete_event)
+        self.delete_button.pack()
+
+    def display_event_details(self):
+        dialog = tk.Toplevel(self)
+        dialog.title("Enter Event ID")
+        
+        label = tk.Label(dialog, text="Enter the Event ID:")
+        label.pack(padx=10, pady=10)
+        
+        entry = tk.Entry(dialog)
+        entry.pack(padx=10, pady=5)
+        
+        button = tk.Button(dialog, text="OK", command=lambda: self.get_event_details(entry.get(), dialog))
+        button.pack(padx=10, pady=5)
+
+    def get_event_details(self, event_id, dialog):
+        selected_event = next((event for event in self.events if event.event_id == event_id), None)
+
+        if selected_event:
+            details = f"Event ID: {selected_event.event_id}\n"
+            details += f"Title: {selected_event.title}\n"
+            details += f"Date: {selected_event.date}\n"
+            details += f"Location: {selected_event.location}\n"
+            details += f"Client ID: {selected_event.client_id}\n"
+            details += f"Guest List: {', '.join(selected_event.guest_list)}\n"
+            details += f"Suppliers: {', '.join(selected_event.suppliers)}\n"
+            tk.messagebox.showinfo("Event Details", details)
+        else:
+            tk.messagebox.showerror("Error", f"Event with ID {event_id} not found.")
+        
+        dialog.destroy()
+
+    def edit_selected_event(self):
+        selected_item = self.event_tree.selection()[0]
+        event_id = self.event_tree.item(selected_item, "values")[0]
+        selected_event = next((event for event in self.events if event.event_id == event_id), None)
+
+        if selected_event:
+            dialog = EditEventDialog(self, selected_event)
+            self.wait_window(dialog)
+
+            edited_event = dialog.event
+            if edited_event:
+                self.event_tree.item(selected_item, text=edited_event.title)
+                self.event_tree.set(selected_item, "Event ID", edited_event.event_id)
+                self.event_tree.set(selected_item, "Title", edited_event.title)
+                self.event_tree.set(selected_item, "Date", edited_event.date)
+                self.event_tree.set(selected_item, "Location", edited_event.location)
+                self.event_tree.set(selected_item, "Client ID", edited_event.client_id)
+                self.event_tree.set(selected_item, "Guest List", ", ".join(edited_event.guest_list))
+                self.event_tree.set(selected_item, "Suppliers", ", ".join(edited_event.suppliers))
+                self.save_data()
+
+    def add_event(self):
+        dialog = AddEventDialog(self)
+        self.wait_window(dialog)
+
+        new_event = dialog.event
+        if new_event:
+            self.events.append(new_event)
+
+    def delete_event(self):
+        selected_item = self.event_tree.selection()[0]
+        event_id = self.event_tree.item(selected_item, "values")[0]
+        
+        selected_event = next((event for event in self.events if event.event_id == event_id), None)
+
+        if selected_event:
+            self.events.remove(selected_event)
+            self.event_tree.delete(selected_item)
+
+    def update_event_table(self):
+        for item in self.event_tree.get_children():
+            self.event_tree.delete(item)
+        for event in self.events:
+            self.event_tree.insert("", tk.END, text=event.title,
+                                    values=(event.event_id, event.title, event.date, event.location,
+                                            event.client_id, ", ".join(event.guest_list), ", ".join(event.suppliers)))       
+
+    def clear_widgets(self):
+        for widget in self.winfo_children():
+            widget.pack_forget()
+    
+
+class EditEventDialog(tk.Toplevel):
+    def __init__(self, parent, event):
+        super().__init__(parent)
+        self.title("Edit Event")
+        self.geometry("300x300")
+        self.event = event
+
+        self.title_label = tk.Label(self, text="Title:")
+        self.title_label.grid(row=0, column=0, padx=5, pady=5)
+        self.title_entry = tk.Entry(self)
+        self.title_entry.grid(row=0, column=1, padx=5, pady=5)
+        self.title_entry.insert(tk.END, event.title)
+
+        self.date_label = tk.Label(self, text="Date:")
+        self.date_label.grid(row=1, column=0, padx=5, pady=5)
+        self.date_entry = tk.Entry(self)
+        self.date_entry.grid(row=1, column=1, padx=5, pady=5)
+        self.date_entry.insert(tk.END, event.date)
+
+        self.location_label = tk.Label(self, text="Location:")
+        self.location_label.grid(row=2, column=0, padx=5, pady=5)
+        self.location_entry = tk.Entry(self)
+        self.location_entry.grid(row=2, column=1, padx=5, pady=5)
+        self.location_entry.insert(tk.END, event.location)
+
+        self.client_id_label = tk.Label(self, text="Client ID:")
+        self.client_id_label.grid(row=3, column=0, padx=5, pady=5)
+        self.client_id_entry = tk.Entry(self)
+        self.client_id_entry.grid(row=3, column=1, padx=5, pady=5)
+        self.client_id_entry.insert(tk.END, event.client_id)
+
+        self.guest_list_label = tk.Label(self, text="Guest List:")
+        self.guest_list_label.grid(row=4, column=0, padx=5, pady=5)
+        self.guest_list_entry = tk.Entry(self)
+        self.guest_list_entry.grid(row=4, column=1, padx=5, pady=5)
+        self.guest_list_entry.insert(tk.END, ", ".join(event.guest_list))
+
+        self.suppliers_label = tk.Label(self, text="Suppliers:")
+        self.suppliers_label.grid(row=5, column=0, padx=5, pady=5)
+        self.suppliers_entry = tk.Entry(self)
+        self.suppliers_entry.grid(row=5, column=1, padx=5, pady=5)
+        self.suppliers_entry.insert(tk.END, ", ".join(event.suppliers))
+
+        self.ok_button = tk.Button(self, text="OK", command=self.ok)
+        self.ok_button.grid(row=6, column=0, columnspan=2, padx=5, pady=10)
+
+    def ok(self):
+        self.event.title = self.title_entry.get()
+        self.event.date = self.date_entry.get()
+        self.event.location = self.location_entry.get()
+        self.event.client_id = self.client_id_entry.get()
+        self.event.guest_list = [guest.strip() for guest in self.guest_list_entry.get().split(",")]
+        self.event.suppliers = [supplier.strip() for supplier in self.suppliers_entry.get().split(",")]
+        self.destroy()
+
+class AddEventDialog(tk.Toplevel):
+    def __init__(self, parent):
+        super().__init__(parent)
+        self.parent = parent 
+        self.title("Add Event")
+        self.geometry("300x300")
+
+        self.title_label = tk.Label(self, text="Title:")
+        self.title_label.grid(row=0, column=0, padx=5, pady=5)
+        self.title_entry = tk.Entry(self)
+        self.title_entry.grid(row=0, column=1, padx=5, pady=5)
+        
+        self.date_label = tk.Label(self, text="Date:")
+        self.date_label.grid(row=1, column=0, padx=5, pady=5)
+        self.date_entry = tk.Entry(self)
+        self.date_entry.grid(row=1, column=1, padx=5, pady=5)
+
+        self.location_label = tk.Label(self, text="Location:")
+        self.location_label.grid(row=2, column=0, padx=5, pady=5)
+        self.location_entry = tk.Entry(self)
+        self.location_entry.grid(row=2, column=1, padx=5, pady=5)
+
+        self.client_id_label = tk.Label(self, text="Client ID:")
+        self.client_id_label.grid(row=3, column=0, padx=5, pady=5)
+        self.client_id_entry = tk.Entry(self)
+        self.client_id_entry.grid(row=3, column=1, padx=5, pady=5)
+
+        self.guest_list_label = tk.Label(self, text="Guest List:")
+        self.guest_list_label.grid(row=4, column=0, padx=5, pady=5)
+        self.guest_list_entry = tk.Entry(self)
+        self.guest_list_entry.grid(row=4, column=1, padx=5, pady=5)
+
+        self.suppliers_label = tk.Label(self, text="Suppliers:")
+        self.suppliers_label.grid(row=5, column=0, padx=5, pady=5)
+        self.suppliers_entry = tk.Entry(self)
+        self.suppliers_entry.grid(row=5, column=1, padx=5, pady=5)
+
+        self.ok_button = tk.Button(self, text="OK", command=self.ok)
+        self.ok_button.grid(row=6, column=0, columnspan=2, padx=5, pady=10)
+
+    def ok(self):
+        title = self.title_entry.get()
+        date = self.date_entry.get()
+        location = self.location_entry.get()
+        client_id = self.client_id_entry.get()
+        guest_list = [guest.strip() for guest in self.guest_list_entry.get().split(",")]
+        suppliers = [supplier.strip() for supplier in self.suppliers_entry.get().split(",")]
+
+        new_event_id = str(len(self.parent.events) + 1)
+
+        new_event = Event(
+            event_id=new_event_id,
+            title=title,
+            date=date,
+            location=location,
+            client_id=client_id,
+            guest_list=guest_list,
+            suppliers=suppliers
+        )
+
+        self.parent.events.append(new_event)
+
+        self.parent.update_event_table()
+
+        self.destroy()
