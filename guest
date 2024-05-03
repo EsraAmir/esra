@@ -1,1 +1,245 @@
+import tkinter as tk
+from tkinter import ttk
+import pickle
+import os
+
+class Guest:
+    def __init__(self, guest_id, name, address, contact_details):
+        self.guest_id = guest_id
+        self.name = name
+        self.address = address
+        self.contact_details = contact_details
+
+class GuestManagement(tk.Tk):
+    def __init__(self):
+        super().__init__()
+        
+
+    def load_data(self):
+        try:
+            with open("guests.pkl", "rb") as file:
+                if os.path.exists("guests.pkl") and os.path.getsize("guests.pkl") > 0:
+                    self.guests = pickle.load(file)
+                else:
+                    self.guests = [
+                        Guest("1", "John Doe", "123 Main St", "john@example.com"),
+                        Guest("2", "Jane Smith", "456 Elm St", "jane@example.com"),
+                        Guest("3", "Alice Johnson", "789 Oak St", "alice@example.com")
+                    ]
+        except FileNotFoundError:
+            self.guests = [
+                Guest("1", "John Doe", "123 Main St", "john@example.com"),
+                Guest("2", "Jane Smith", "456 Elm St", "jane@example.com"),
+                Guest("3", "Alice Johnson", "789 Oak St", "alice@example.com")
+            ]
+
+    def save_data(self):
+        with open("guests.pkl", "wb") as file:
+            pickle.dump(self.guests, file)
+
+    def create_widgets(self):
+        self.manage_guests_button = tk.Button(self, text="Manage Guests", command=self.manage_guests)
+        self.manage_guests_button.pack(pady=10)
+
+    def manage_guests(self):
+        self.guest_label = tk.Label(self, text="Manage Guests", font=("Helvetica", 14))
+        self.guest_label.pack(pady=10)
+
+        self.guest_tree = ttk.Treeview(self)
+        self.guest_tree["columns"] = ("Guest ID", "Name", "Address", "Contact Details")
+
+        self.guest_tree.column("#0", width=100)
+        self.guest_tree.column("Guest ID", width=100)
+        self.guest_tree.column("Name", width=150)
+        self.guest_tree.column("Address", width=200)
+        self.guest_tree.column("Contact Details", width=150)
+
+        self.guest_tree.heading("#0", text="Guest Details")
+        self.guest_tree.heading("Guest ID", text="Guest ID")
+        self.guest_tree.heading("Name", text="Name")
+        self.guest_tree.heading("Address", text="Address")
+        self.guest_tree.heading("Contact Details", text="Contact Details")
+
+        for guest in self.guests:
+            self.guest_tree.insert("", tk.END, text=guest.name,
+                                    values=(guest.guest_id, guest.name, guest.address, guest.contact_details))
+        self.guest_tree.pack(fill=tk.BOTH, expand=True, padx=10, pady=10)
+
+        scroll_y = ttk.Scrollbar(self, orient="vertical", command=self.guest_tree.yview)
+        scroll_y.pack(side="right", fill="y")
+        self.guest_tree.configure(yscrollcommand=scroll_y.set)
+
+        scroll_x = ttk.Scrollbar(self, orient="horizontal", command=self.guest_tree.xview)
+        scroll_x.pack(side="bottom", fill="x")
+        self.guest_tree.configure(xscrollcommand=scroll_x.set)
+
+        self.add_guest_button = tk.Button(self, text="Add Guest", command=self.add_guest)
+        self.add_guest_button.pack(pady=5)
+
+        self.edit_button = tk.Button(self, text="Edit", command=self.edit_selected_guest)
+        self.edit_button.pack()
+
+        self.delete_button = tk.Button(self, text="Delete", command=self.delete_guest)
+        self.delete_button.pack()
+
+        self.display_guest_button = tk.Button(self, text="Display Guest Details", command=self.display_guest_details)
+        self.display_guest_button.pack(pady=5)
+
+    def add_guest(self):
+        dialog = AddGuestDialog(self)
+        self.wait_window(dialog)
+
+        new_guest = dialog.guest
+        if new_guest:
+            self.guests.append(new_guest)
+            self.update_guest_table()
+            self.save_data()
+
+    def edit_selected_guest(self):
+        selected_item = self.guest_tree.selection()[0]
+        guest_id = self.guest_tree.item(selected_item, "values")[0]
+        selected_guest = next((guest for guest in self.guests if guest.guest_id == guest_id), None)
+
+        if selected_guest:
+            dialog = EditGuestDialog(self, selected_guest)
+            self.wait_window(dialog)
+
+            edited_guest = dialog.guest
+            if edited_guest:
+                self.guest_tree.item(selected_item, text=edited_guest.name)
+                self.guest_tree.set(selected_item, "Guest ID", edited_guest.guest_id)
+                self.guest_tree.set(selected_item, "Name", edited_guest.name)
+                self.guest_tree.set(selected_item, "Address", edited_guest.address)
+                self.guest_tree.set(selected_item, "Contact Details", edited_guest.contact_details)
+                self.save_data()
+
+    def delete_guest(self):
+        selected_item = self.guest_tree.selection()[0]
+        guest_id = self.guest_tree.item(selected_item, "values")[0]
+
+        selected_guest = next((guest for guest in self.guests if guest.guest_id == guest_id), None)
+
+        if selected_guest:
+            self.guests.remove(selected_guest)
+            self.guest_tree.delete(selected_item)
+            self.save_data()
+
+    def update_guest_table(self):
+        for item in self.guest_tree.get_children():
+            self.guest_tree.delete(item)
+
+        for guest in self.guests:
+            self.guest_tree.insert("", tk.END, text=guest.name,
+                                    values=(guest.guest_id, guest.name, guest.address, guest.contact_details))
+
+    def display_guest_details(self):
+   
+        dialog = tk.Toplevel(self)
+        dialog.title("Enter Guest ID")
+
+        label = tk.Label(dialog, text="Enter Guest ID:")
+        label.pack(pady=5)
+
+        entry = tk.Entry(dialog)
+        entry.pack(pady=5)
+
+        ok_button = tk.Button(dialog, text="OK", command=lambda: self.get_guest_details(entry.get(), dialog))
+        ok_button.pack(pady=5)
+
+    def get_guest_details(self, guest_id, dialog):
+        
+        selected_guest = next((guest for guest in self.guests if guest.guest_id == guest_id), None)
+
+        if selected_guest:
+            
+            details = f"Guest ID: {selected_guest.guest_id}\n"
+            details += f"Name: {selected_guest.name}\n"
+            details += f"Address: {selected_guest.address}\n"
+            details += f"Contact Details: {selected_guest.contact_details}\n"
+            tk.messagebox.showinfo("Guest Details", details)
+        else:
+            tk.messagebox.showerror("Error", f"Guest with ID {guest_id} not found.")
+        
+        
+        dialog.destroy()
+
+class EditGuestDialog(tk.Toplevel):
+    def __init__(self, parent, guest):
+        super().__init__(parent)
+        self.title("Edit Guest")
+        self.guest = guest
+
+        self.name_label = tk.Label(self, text="Name:")
+        self.name_label.grid(row=0, column=0, padx=5, pady=5)
+        self.name_entry = tk.Entry(self)
+        self.name_entry.grid(row=0, column=1, padx=5, pady=5)
+        self.name_entry.insert(tk.END, guest.name)
+
+        self.address_label = tk.Label(self, text="Address:")
+        self.address_label.grid(row=1, column=0, padx=5, pady=5)
+        self.address_entry = tk.Entry(self)
+        self.address_entry.grid(row=1, column=1, padx=5, pady=5)
+        self.address_entry.insert(tk.END, guest.address)
+
+        self.contact_label = tk.Label(self, text="Contact Details:")
+        self.contact_label.grid(row=2, column=0, padx=5, pady=5)
+        self.contact_entry = tk.Entry(self)
+        self.contact_entry.grid(row=2, column=1, padx=5, pady=5)
+        self.contact_entry.insert(tk.END, guest.contact_details)
+
+        self.ok_button = tk.Button(self, text="OK", command=self.ok)
+        self.ok_button.grid(row=3, column=0, columnspan=2, padx=5, pady=10)
+
+    def ok(self):
+        self.guest.name = self.name_entry.get()
+        self.guest.address = self.address_entry.get()
+        self.guest.contact_details = self.contact_entry.get()
+        self.destroy()
+
+class AddGuestDialog(tk.Toplevel):
+    def __init__(self, parent):
+        super().__init__(parent)
+        self.parent = parent
+        self.title("Add Guest")
+
+        self.name_label = tk.Label(self, text="Name:")
+        self.name_label.grid(row=0, column=0, padx=5, pady=5)
+        self.name_entry = tk.Entry(self)
+        self.name_entry.grid(row=0, column=1, padx=5, pady=5)
+
+        self.address_label = tk.Label(self, text="Address:")
+        self.address_label.grid(row=1, column=0, padx=5, pady=5)
+        self.address_entry = tk.Entry(self)
+        self.address_entry.grid(row=1, column=1, padx=5, pady=5)
+
+        self.contact_label = tk.Label(self, text="Contact Details:")
+        self.contact_label.grid(row=2, column=0, padx=5, pady=5)
+        self.contact_entry = tk.Entry(self)
+        self.contact_entry.grid(row=2, column=1, padx=5, pady=5)
+
+        self.ok_button = tk.Button(self, text="OK", command=self.ok)
+        self.ok_button.grid(row=3, column=0, columnspan=2, padx=5, pady=10)
+
+    def ok(self):
+        name = self.name_entry.get()
+        address = self.address_entry.get()
+        contact_details = self.contact_entry.get()
+
+        new_guest_id = str(len(self.parent.guests) + 1)
+
+        new_guest = Guest(
+            guest_id=new_guest_id,
+            name=name,
+            address=address,
+            contact_details=contact_details
+        )
+
+        self.parent.guests.append(new_guest)
+        self.parent.update_guest_table()
+        self.parent.save_data()
+        self.destroy()
+
+if __name__ == "__main__":
+    app = GuestManagement()
+    app.mainloop()
 
