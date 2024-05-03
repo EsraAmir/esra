@@ -1,0 +1,57 @@
+import tkinter as tk
+from tkinter import ttk
+import pickle
+from tkinter import simpledialog
+from employees import EmployeeManagement
+from events import EventManagement
+from client import ClientManagement
+from guest import GuestManagement
+from supplier import SupplierManagement
+from employees import Employee
+
+class EventManagementApp(tk.Tk):
+    def __init__(self):
+        super().__init__()
+        self.title("Event Management System")
+        self.geometry("800x400")
+        self.current_page = None  
+
+        
+        self.employee_management = EmployeeManagement()
+        self.event_management = EventManagement()
+        self.client_management = ClientManagement()
+        self.guest_management = GuestManagement()
+        self.supplier_management = SupplierManagement()
+
+        self.label = tk.Label(self, text="Welcome to Event Management System", font=("Helvetica", 16))
+        self.label.pack(pady=10)
+
+        self.manage_employees_button = tk.Button(self, text="Manage Employees", command=self.employee_management.manage_employees)
+        self.manage_employees_button.pack(pady=5)
+
+        self.manage_events_button = tk.Button(self, text="Manage Events", command=self.event_management.manage_events)
+        self.manage_events_button.pack(pady=5)
+
+        self.manage_clients_button = tk.Button(self, text="Manage Clients", command=self.client_management.manage_clients)
+        self.manage_clients_button.pack(pady=5)
+
+        self.manage_guests_button = tk.Button(self, text="Manage Guests", command=self.guest_management.manage_guests)
+        self.manage_guests_button.pack(pady=5)
+
+        self.manage_suppliers_button = tk.Button(self, text="Manage Suppliers", command=self.supplier_management.manage_suppliers)
+        self.manage_suppliers_button.pack(pady=5)
+    
+        
+        self.employee_management.load_data()
+        self.event_management.load_data()
+        self.client_management.load_data()
+        self.guest_management.load_data()
+        self.guest_management.load_data()
+
+        
+    
+
+
+if __name__ == "__main__":
+    app = EventManagementApp()
+    app.mainloop()
