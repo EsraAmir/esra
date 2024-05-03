@@ -19,3 +19,347 @@ class Employee:
 class EmployeeManagement(tk.Tk):
     def __init__(self):
         super().__init__()
+
+       
+
+    
+
+    def load_data(self):
+            try:
+                with open("employees.pkl", "rb") as file:
+                    self.employees = pickle.load(file)
+            except FileNotFoundError:
+                self.employees = [
+                    Employee("1", "John Doe", "Sales", "Salesperson", 50000, "30", "1990-01-01", "123456789", "101"),
+                    Employee("2", "Jane Smith", "Marketing", "Marketing Manager", 60000, "40", "1980-01-01", "987654321", "102"),
+                    Employee("3", "Alice Johnson", "Finance", "Financial Analyst", 55000, "35", "1985-01-01", "456789123", "103")
+                ]
+
+    def save_data(self):
+            
+            
+            with open("employees.pkl", "wb") as file:
+                pickle.dump(self.employees, file)
+
+    def manage_employees(self):
+        self.clear_widgets()
+
+        self.employee_label = tk.Label(self, text="Manage Employees", font=("Helvetica", 14))
+        self.employee_label.pack(pady=10)
+
+        self.employee_tree = ttk.Treeview(self)
+        self.employee_tree["columns"] = ("Employee ID", "Department", "Job Title", "Basic Salary", "Age", "Date of Birth", "Passport Details", "Manager ID")
+
+        self.employee_tree.column("#0", width=100)  # Ajustez la largeur de la colonne 0 (Employee Details)
+        self.employee_tree.column("Employee ID", width=50)
+        self.employee_tree.column("Department", width=100)
+        self.employee_tree.column("Job Title", width=150)
+        self.employee_tree.column("Basic Salary", width=100)
+        self.employee_tree.column("Age", width=60)
+        self.employee_tree.column("Date of Birth", width=100)
+        self.employee_tree.column("Passport Details", width=120)
+        self.employee_tree.column("Manager ID", width=70)
+
+        self.employee_tree.pack(fill=tk.BOTH, expand=True, padx=10, pady=10)
+
+        self.employee_tree.heading("#0", text="Employee Details")
+        self.employee_tree.heading("Employee ID", text="Employee ID")
+        self.employee_tree.heading("Department", text="Department")
+        self.employee_tree.heading("Job Title", text="Job Title")
+        self.employee_tree.heading("Basic Salary", text="Basic Salary")
+        self.employee_tree.heading("Age", text="Age")
+        self.employee_tree.heading("Date of Birth", text="Date of Birth")
+        self.employee_tree.heading("Passport Details", text="Passport Details")
+        self.employee_tree.heading("Manager ID", text="Manager ID")
+
+        for employee in self.employees:
+            self.employee_tree.insert("", tk.END, text=employee.name,
+                                       values=(employee.employee_id, employee.department, employee.job_title,
+                                               employee.basic_salary, employee.age, employee.date_of_birth,
+                                               employee.passport_details, employee.manager_id))
+        self.employee_tree.pack(fill=tk.BOTH, expand=True, padx=10, pady=10)
+
+        
+        scroll_y = ttk.Scrollbar(self, orient="vertical", command=self.employee_tree.yview)
+        scroll_y.pack(side="right", fill="y")
+        self.employee_tree.configure(yscrollcommand=scroll_y.set)
+
+        scroll_x = ttk.Scrollbar(self, orient="horizontal", command=self.employee_tree.xview)
+        scroll_x.pack(side="bottom", fill="x")
+        self.employee_tree.configure(xscrollcommand=scroll_x.set)
+
+        self.display_employee_button = tk.Button(self, text="Display Employee Details", command=self.display_employee_details)
+        self.display_employee_button.pack(pady=5)
+
+        self.add_employee_button = tk.Button(self, text="Add Employee", command=self.add_employee)
+        self.add_employee_button.pack(pady=5)
+
+        self.edit_button = tk.Button(self, text="Edit", command=self.edit_selected_employee)
+        self.edit_button.pack()
+
+        self.delete_button = tk.Button(self, text="Delete", command=self.delete_employee)
+        self.delete_button.pack()
+    
+    def display_employee_details(self):
+        
+        dialog = tk.Toplevel(self)
+        dialog.title("Enter Employee ID")
+        
+        
+        label = tk.Label(dialog, text="Enter the Employee ID:")
+        label.pack(padx=10, pady=10)
+        
+        
+        entry = tk.Entry(dialog)
+        entry.pack(padx=10, pady=5)
+        
+       
+        button = tk.Button(dialog, text="OK", command=lambda: self.get_employee_details(entry.get(), dialog))
+        button.pack(padx=10, pady=5)
+
+    def get_employee_details(self, employee_id, dialog):
+        
+        selected_employee = next((employee for employee in self.employees if employee.employee_id == employee_id), None)
+
+        if selected_employee:
+            
+            details = f"Employee ID: {selected_employee.employee_id}\n"
+            details += f"Name: {selected_employee.name}\n"
+            details += f"Department: {selected_employee.department}\n"
+            
+            tk.messagebox.showinfo("Employee Details", details)
+        else:
+            tk.messagebox.showerror("Error", f"Employee with ID {employee_id} not found.")
+        
+       
+        dialog.destroy()
+
+
+    def edit_selected_employee(self):
+        selected_item = self.employee_tree.selection()[0]
+        employee_id = self.employee_tree.item(selected_item, "values")[0]
+        selected_employee = next((employee for employee in self.employees if employee.employee_id == employee_id), None)
+
+        if selected_employee:
+            dialog = EditEmployeeDialog(self, selected_employee)
+            self.wait_window(dialog)
+
+            edited_employee = dialog.employee
+            if edited_employee:
+                self.employee_tree.item(selected_item, text=edited_employee.name)
+                self.employee_tree.set(selected_item, "Employee ID", edited_employee.employee_id)
+                self.employee_tree.set(selected_item, "Department", edited_employee.department)
+                self.employee_tree.set(selected_item, "Job Title", edited_employee.job_title)
+                self.employee_tree.set(selected_item, "Basic Salary", edited_employee.basic_salary)
+                self.employee_tree.set(selected_item, "Age", edited_employee.age)
+                self.employee_tree.set(selected_item, "Date of Birth", edited_employee.date_of_birth)
+                self.employee_tree.set(selected_item, "Passport Details", edited_employee.passport_details)
+                self.employee_tree.set(selected_item, "Manager ID", edited_employee.manager_id)
+                self.save_data()
+
+    def add_employee(self):
+        dialog = AddEmployeeDialog(self)
+        self.wait_window(dialog)
+
+
+
+
+        new_employee = dialog.employee
+        if new_employee:
+           
+            self.employees.append(new_employee)
+
+    
+    def delete_employee(self):
+        selected_item = self.employee_tree.selection()[0]
+        employee_id = self.employee_tree.item(selected_item, "values")[0]
+        
+        
+        selected_employee = next((employee for employee in self.employees if employee.employee_id == employee_id), None)
+
+        if selected_employee:
+         
+            self.employees.remove(selected_employee)
+            
+            
+            self.employee_tree.delete(selected_item)
+
+
+    def update_employee_table(self):
+      
+        for item in self.employee_tree.get_children():
+            self.employee_tree.delete(item)
+        
+        for employee in self.employees:
+            self.employee_tree.insert("", tk.END, text=employee.name,
+                                       values=(employee.employee_id, employee.department, employee.job_title,
+                                               employee.basic_salary, employee.age, employee.date_of_birth,
+                                               employee.passport_details, employee.manager_id))       
+
+    def clear_widgets(self):
+        for widget in self.winfo_children():
+            widget.pack_forget()
+    
+
+class EditEmployeeDialog(tk.Toplevel):
+    def __init__(self, parent, employee):
+        super().__init__(parent)
+        self.title("Edit Employee")
+        self.geometry("300x300")
+        self.employee = employee
+
+        self.name_label = tk.Label(self, text="Name:")
+        self.name_label.grid(row=0, column=0, padx=5, pady=5)
+        self.name_entry = tk.Entry(self)
+        self.name_entry.grid(row=0, column=1, padx=5, pady=5)
+        self.name_entry.insert(tk.END, employee.name)
+
+        self.department_label = tk.Label(self, text="Department:")
+        self.department_label.grid(row=1, column=0, padx=5, pady=5)
+        self.department_entry = tk.Entry(self)
+        self.department_entry.grid(row=1, column=1, padx=5, pady=5)
+        self.department_entry.insert(tk.END, employee.department)
+
+        self.job_title_label = tk.Label(self, text="Job Title:")
+        self.job_title_label.grid(row=2, column=0, padx=5, pady=5)
+        self.job_title_entry = tk.Entry(self)
+        self.job_title_entry.grid(row=2, column=1, padx=5, pady=5)
+        self.job_title_entry.insert(tk.END, employee.job_title)
+
+        self.basic_salary_label = tk.Label(self, text="Basic Salary:")
+        self.basic_salary_label.grid(row=3, column=0, padx=5, pady=5)
+        self.basic_salary_entry = tk.Entry(self)
+        self.basic_salary_entry.grid(row=3, column=1, padx=5, pady=5)
+        self.basic_salary_entry.insert(tk.END, employee.basic_salary)
+
+        self.age_label = tk.Label(self, text="Age:")
+        self.age_label.grid(row=4, column=0, padx=5, pady=5)
+        self.age_entry = tk.Entry(self)
+        self.age_entry.grid(row=4, column=1, padx=5, pady=5)
+        self.age_entry.insert(tk.END, employee.age)
+
+        self.date_of_birth_label = tk.Label(self, text="Date of Birth:")
+        self.date_of_birth_label.grid(row=5, column=0, padx=5, pady=5)
+        self.date_of_birth_entry = tk.Entry(self)
+        self.date_of_birth_entry.grid(row=5, column=1, padx=5, pady=5)
+        self.date_of_birth_entry.insert(tk.END, employee.date_of_birth)
+
+        self.passport_details_label = tk.Label(self, text="Passport Details:")
+        self.passport_details_label.grid(row=6, column=0, padx=5, pady=5)
+        self.passport_details_entry = tk.Entry(self)
+        self.passport_details_entry.grid(row=6, column=1, padx=5, pady=5)
+        self.passport_details_entry.insert(tk.END, employee.passport_details)
+
+        self.manager_id_label = tk.Label(self, text="Manager ID:")
+        self.manager_id_label.grid(row=7, column=0, padx=5, pady=5)
+        self.manager_id_entry = tk.Entry(self)
+        self.manager_id_entry.grid(row=7, column=1, padx=5, pady=5)
+        self.manager_id_entry.insert(tk.END, employee.manager_id)
+
+        self.ok_button = tk.Button(self, text="OK", command=self.ok)
+        self.ok_button.grid(row=8, column=0, columnspan=2, padx=5, pady=10)
+
+    def ok(self):
+        self.employee.name = self.name_entry.get()
+        self.employee.department = self.department_entry.get()
+        self.employee.job_title = self.job_title_entry.get()
+        self.employee.basic_salary = self.basic_salary_entry.get()
+        self.employee.age = self.age_entry.get()
+        self.employee.date_of_birth = self.date_of_birth_entry.get()
+        self.employee.passport_details = self.passport_details_entry.get()
+        self.employee.manager_id = self.manager_id_entry.get()
+        self.destroy()
+
+
+
+class AddEmployeeDialog(tk.Toplevel):
+    def __init__(self, parent):
+        super().__init__(parent)
+        self.parent = parent 
+        self.title("Add Employee")
+        self.geometry("300x300")
+
+    
+        self.name_label = tk.Label(self, text="Name:")
+        self.name_label.grid(row=0, column=0, padx=5, pady=5)
+        self.name_entry = tk.Entry(self)
+        self.name_entry.grid(row=0, column=1, padx=5, pady=5)
+        
+
+        self.department_label = tk.Label(self, text="Department:")
+        self.department_label.grid(row=1, column=0, padx=5, pady=5)
+        self.department_entry = tk.Entry(self)
+        self.department_entry.grid(row=1, column=1, padx=5, pady=5)
+        
+
+        self.job_title_label = tk.Label(self, text="Job Title:")
+        self.job_title_label.grid(row=2, column=0, padx=5, pady=5)
+        self.job_title_entry = tk.Entry(self)
+        self.job_title_entry.grid(row=2, column=1, padx=5, pady=5)
+        
+
+        self.basic_salary_label = tk.Label(self, text="Basic Salary:")
+        self.basic_salary_label.grid(row=3, column=0, padx=5, pady=5)
+        self.basic_salary_entry = tk.Entry(self)
+        self.basic_salary_entry.grid(row=3, column=1, padx=5, pady=5)
+        
+
+        self.age_label = tk.Label(self, text="Age:")
+        self.age_label.grid(row=4, column=0, padx=5, pady=5)
+        self.age_entry = tk.Entry(self)
+        self.age_entry.grid(row=4, column=1, padx=5, pady=5)
+        
+
+        self.date_of_birth_label = tk.Label(self, text="Date of Birth:")
+        self.date_of_birth_label.grid(row=5, column=0, padx=5, pady=5)
+        self.date_of_birth_entry = tk.Entry(self)
+        self.date_of_birth_entry.grid(row=5, column=1, padx=5, pady=5)
+        
+
+        self.passport_details_label = tk.Label(self, text="Passport Details:")
+        self.passport_details_label.grid(row=6, column=0, padx=5, pady=5)
+        self.passport_details_entry = tk.Entry(self)
+        self.passport_details_entry.grid(row=6, column=1, padx=5, pady=5)
+       
+
+        self.manager_id_label = tk.Label(self, text="Manager ID:")
+        self.manager_id_label.grid(row=7, column=0, padx=5, pady=5)
+        self.manager_id_entry = tk.Entry(self)
+        self.manager_id_entry.grid(row=7, column=1, padx=5, pady=5)
+        
+
+        self.ok_button = tk.Button(self, text="OK", command=self.ok)
+        self.ok_button.grid(row=8, column=0, columnspan=2, padx=5, pady=10)
+
+    def ok(self):
+        
+        name = self.name_entry.get()
+        department = self.department_entry.get()
+        job_title = self.job_title_entry.get()
+        basic_salary = self.basic_salary_entry.get()
+        age = self.age_entry.get()
+        date_of_birth = self.date_of_birth_entry.get()
+        passport_details = self.passport_details_entry.get()
+        manager_id = self.manager_id_entry.get()
+
+        
+        new_employee_id = str(len(self.parent.employees) + 1)
+
+        
+        new_employee = Employee(
+            employee_id=new_employee_id, 
+            name=name,
+            department=department,
+            job_title=job_title,
+            basic_salary=basic_salary,
+            age=age,
+            date_of_birth=date_of_birth,
+            passport_details=passport_details,
+            manager_id=manager_id
+        )
+
+        self.parent.employees.append(new_employee)
+
+        self.parent.update_employee_table()
+
+        self.destroy()
