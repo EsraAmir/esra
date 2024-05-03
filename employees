@@ -1,0 +1,21 @@
+import tkinter as tk
+from tkinter import ttk
+import pickle
+from tkinter import simpledialog
+
+class Employee:
+    def __init__(self, employee_id, name, department, job_title, basic_salary, age, date_of_birth, passport_details, manager_id):
+        self.employee_id = employee_id
+        self.name = name
+        self.department = department
+        self.job_title = job_title
+        self.basic_salary = basic_salary
+        self.age = age
+        self.date_of_birth = date_of_birth
+        self.passport_details = passport_details
+        self.manager_id = manager_id
+        
+
+class EmployeeManagement(tk.Tk):
+    def __init__(self):
+        super().__init__()
