@@ -1,1 +1,304 @@
+import tkinter as tk
+from tkinter import ttk
+import pickle
+import os
 
+class Supplier:
+    def __init__(self, supplier_id, name, address, contact_details, services_provided, min_guests, max_guests):
+        self.supplier_id = supplier_id
+        self.name = name
+        self.address = address
+        self.contact_details = contact_details
+        self.services_provided = services_provided
+        self.min_guests = min_guests
+        self.max_guests = max_guests
+
+class SupplierManagement(tk.Tk):
+    def __init__(self):
+        super().__init__()
+       
+    def load_data(self):
+        try:
+            with open("suppliers.pkl", "rb") as file:
+                if os.path.exists("suppliers.pkl") and os.path.getsize("suppliers.pkl") > 0:
+                    self.suppliers = pickle.load(file)
+                else:
+                    self.suppliers = [
+                        Supplier("1", "Supplier 1", "123 Main St", "supplier1@example.com", "Service 1", 10, 100),
+                        Supplier("2", "Supplier 2", "456 Elm St", "supplier2@example.com", "Service 2", 20, 200),
+                        Supplier("3", "Supplier 3", "789 Oak St", "supplier3@example.com", "Service 3", 30, 300)
+                    ]
+        except FileNotFoundError:
+            self.suppliers = [
+                Supplier("1", "Supplier 1", "123 Main St", "supplier1@example.com", "Service 1", 10, 100),
+                Supplier("2", "Supplier 2", "456 Elm St", "supplier2@example.com", "Service 2", 20, 200),
+                Supplier("3", "Supplier 3", "789 Oak St", "supplier3@example.com", "Service 3", 30, 300)
+            ]
+
+    def save_data(self):
+        with open("suppliers.pkl", "wb") as file:
+            pickle.dump(self.suppliers, file)
+
+    def create_widgets(self):
+        self.manage_suppliers_button = tk.Button(self, text="Manage Suppliers", command=self.manage_suppliers)
+        self.manage_suppliers_button.pack(pady=10)
+
+    def manage_suppliers(self):
+        self.supplier_label = tk.Label(self, text="Manage Suppliers", font=("Helvetica", 14))
+        self.supplier_label.pack(pady=10)
+
+        self.supplier_tree = ttk.Treeview(self)
+        self.supplier_tree["columns"] = ("Supplier ID", "Name", "Address", "Contact Details", "Services Provided", "Min Guests", "Max Guests")
+
+        self.supplier_tree.column("#0", width=100)
+        self.supplier_tree.column("Supplier ID", width=100)
+        self.supplier_tree.column("Name", width=150)
+        self.supplier_tree.column("Address", width=200)
+        self.supplier_tree.column("Contact Details", width=150)
+        self.supplier_tree.column("Services Provided", width=150)
+        self.supplier_tree.column("Min Guests", width=100)
+        self.supplier_tree.column("Max Guests", width=100)
+
+        self.supplier_tree.heading("#0", text="Supplier Details")
+        self.supplier_tree.heading("Supplier ID", text="Supplier ID")
+        self.supplier_tree.heading("Name", text="Name")
+        self.supplier_tree.heading("Address", text="Address")
+        self.supplier_tree.heading("Contact Details", text="Contact Details")
+        self.supplier_tree.heading("Services Provided", text="Services Provided")
+        self.supplier_tree.heading("Min Guests", text="Min Guests")
+        self.supplier_tree.heading("Max Guests", text="Max Guests")
+
+        for supplier in self.suppliers:
+            self.supplier_tree.insert("", tk.END, text=supplier.name,
+                                    values=(supplier.supplier_id, supplier.name, supplier.address, supplier.contact_details, 
+                                            supplier.services_provided, supplier.min_guests, supplier.max_guests))
+        self.supplier_tree.pack(fill=tk.BOTH, expand=True, padx=10, pady=10)
+
+        scroll_y = ttk.Scrollbar(self, orient="vertical", command=self.supplier_tree.yview)
+        scroll_y.pack(side="right", fill="y")
+        self.supplier_tree.configure(yscrollcommand=scroll_y.set)
+
+        scroll_x = ttk.Scrollbar(self, orient="horizontal", command=self.supplier_tree.xview)
+        scroll_x.pack(side="bottom", fill="x")
+        self.supplier_tree.configure(xscrollcommand=scroll_x.set)
+
+        self.add_supplier_button = tk.Button(self, text="Add Supplier", command=self.add_supplier)
+        self.add_supplier_button.pack(pady=5)
+
+        self.edit_button = tk.Button(self, text="Edit", command=self.edit_selected_supplier)
+        self.edit_button.pack()
+
+        self.delete_button = tk.Button(self, text="Delete", command=self.delete_supplier)
+        self.delete_button.pack()
+
+        self.display_supplier_button = tk.Button(self, text="Display Supplier Details", command=self.display_supplier_details)
+        self.display_supplier_button.pack(pady=5) 
+
+    def add_supplier(self):
+        dialog = AddSupplierDialog(self)
+        self.wait_window(dialog)
+
+        new_supplier = dialog.supplier
+        if new_supplier:
+            self.suppliers.append(new_supplier)
+            self.update_supplier_table()
+            self.save_data()
+
+    def edit_selected_supplier(self):
+        selected_item = self.supplier_tree.selection()[0]
+        supplier_id = self.supplier_tree.item(selected_item, "values")[0]
+        selected_supplier = next((supplier for supplier in self.suppliers if supplier.supplier_id == supplier_id), None)
+
+        if selected_supplier:
+            dialog = EditSupplierDialog(self, selected_supplier)
+            self.wait_window(dialog)
+
+            edited_supplier = dialog.supplier
+            if edited_supplier:
+                self.supplier_tree.item(selected_item, text=edited_supplier.name)
+                self.supplier_tree.set(selected_item, "Supplier ID", edited_supplier.supplier_id)
+                self.supplier_tree.set(selected_item, "Name", edited_supplier.name)
+                self.supplier_tree.set(selected_item, "Address", edited_supplier.address)
+                self.supplier_tree.set(selected_item, "Contact Details", edited_supplier.contact_details)
+                self.supplier_tree.set(selected_item, "Services Provided", edited_supplier.services_provided)
+                self.supplier_tree.set(selected_item, "Min Guests", edited_supplier.min_guests)
+                self.supplier_tree.set(selected_item, "Max Guests", edited_supplier.max_guests)
+                self.save_data()
+
+    def delete_supplier(self):
+        selected_item = self.supplier_tree.selection()[0]
+        supplier_id = self.supplier_tree.item(selected_item, "values")[0]
+
+        selected_supplier = next((supplier for supplier in self.suppliers if supplier.supplier_id == supplier_id), None)
+
+        if selected_supplier:
+            self.suppliers.remove(selected_supplier)
+            self.supplier_tree.delete(selected_item)
+            self.save_data()
+
+    def update_supplier_table(self):
+        for item in self.supplier_tree.get_children():
+            self.supplier_tree.delete(item)
+
+        for supplier in self.suppliers:
+            self.supplier_tree.insert("", tk.END, text=supplier.name,
+                                    values=(supplier.supplier_id, supplier.name, supplier.address, supplier.contact_details, 
+                                            supplier.services_provided, supplier.min_guests, supplier.max_guests))
+            
+
+    def display_supplier_details(self):
+        
+        dialog = tk.Toplevel(self)
+        dialog.title("Enter Supplier ID")
+
+        label = tk.Label(dialog, text="Enter Supplier ID:")
+        label.pack(pady=5)
+
+        entry = tk.Entry(dialog)
+        entry.pack(pady=5)
+
+        ok_button = tk.Button(dialog, text="OK", command=lambda: self.get_supplier_details(entry.get(), dialog))
+        ok_button.pack(pady=5)
+
+    def get_supplier_details(self, supplier_id, dialog):
+        
+        selected_supplier = next((supplier for supplier in self.suppliers if supplier.supplier_id == supplier_id), None)
+
+        if selected_supplier:
+            
+            details = f"Supplier ID: {selected_supplier.supplier_id}\n"
+            details += f"Name: {selected_supplier.name}\n"
+            details += f"Address: {selected_supplier.address}\n"
+            details += f"Contact Details: {selected_supplier.contact_details}\n"
+            details += f"Services Provided: {selected_supplier.services_provided}\n"
+            details += f"Min Guests: {selected_supplier.min_guests}\n"
+            details += f"Max Guests: {selected_supplier.max_guests}\n"
+            tk.messagebox.showinfo("Supplier Details", details)
+        else:
+            tk.messagebox.showerror("Error", f"Supplier with ID {supplier_id} not found.")
+        
+        
+        dialog.destroy()
+
+
+class EditSupplierDialog(tk.Toplevel):
+    def __init__(self, parent, supplier):
+        super().__init__(parent)
+        self.title("Edit Supplier")
+        self.supplier = supplier
+
+        self.name_label = tk.Label(self, text="Name:")
+        self.name_label.grid(row=0, column=0, padx=5, pady=5)
+        self.name_entry = tk.Entry(self)
+        self.name_entry.grid(row=0, column=1, padx=5, pady=5)
+        self.name_entry.insert(tk.END, supplier.name)
+
+        self.address_label = tk.Label(self, text="Address:")
+        self.address_label.grid(row=1, column=0, padx=5, pady=5)
+        self.address_entry = tk.Entry(self)
+        self.address_entry.grid(row=1, column=1, padx=5, pady=5)
+        self.address_entry.insert(tk.END, supplier.address)
+
+        self.contact_label = tk.Label(self, text="Contact Details:")
+        self.contact_label.grid(row=2, column=0, padx=5, pady=5)
+        self.contact_entry = tk.Entry(self)
+        self.contact_entry.grid(row=2, column=1, padx=5, pady=5)
+        self.contact_entry.insert(tk.END, supplier.contact_details)
+
+        self.services_label = tk.Label(self, text="Services Provided:")
+        self.services_label.grid(row=3, column=0, padx=5, pady=5)
+        self.services_entry = tk.Entry(self)
+        self.services_entry.grid(row=3, column=1, padx=5, pady=5)
+        self.services_entry.insert(tk.END, supplier.services_provided)
+
+        self.min_guests_label = tk.Label(self, text="Min Guests:")
+        self.min_guests_label.grid(row=4, column=0, padx=5, pady=5)
+        self.min_guests_entry = tk.Entry(self)
+        self.min_guests_entry.grid(row=4, column=1, padx=5, pady=5)
+        self.min_guests_entry.insert(tk.END, supplier.min_guests)
+
+        self.max_guests_label = tk.Label(self, text="Max Guests:")
+        self.max_guests_label.grid(row=5, column=0, padx=5, pady=5)
+        self.max_guests_entry = tk.Entry(self)
+        self.max_guests_entry.grid(row=5, column=1, padx=5, pady=5)
+        self.max_guests_entry.insert(tk.END, supplier.max_guests)
+
+        self.ok_button = tk.Button(self, text="OK", command=self.ok)
+        self.ok_button.grid(row=6, column=0, columnspan=2, padx=5, pady=10)
+
+    def ok(self):
+        self.supplier.name = self.name_entry.get()
+        self.supplier.address = self.address_entry.get()
+        self.supplier.contact_details = self.contact_entry.get()
+        self.supplier.services_provided = self.services_entry.get()
+        self.supplier.min_guests = self.min_guests_entry.get()
+        self.supplier.max_guests = self.max_guests_entry.get()
+        self.destroy()
+
+class AddSupplierDialog(tk.Toplevel):
+    def __init__(self, parent):
+        super().__init__(parent)
+        self.parent = parent
+        self.title("Add Supplier")
+
+        self.name_label = tk.Label(self, text="Name:")
+        self.name_label.grid(row=0, column=0, padx=5, pady=5)
+        self.name_entry = tk.Entry(self)
+        self.name_entry.grid(row=0, column=1, padx=5, pady=5)
+
+        self.address_label = tk.Label(self, text="Address:")
+        self.address_label.grid(row=1, column=0, padx=5, pady=5)
+        self.address_entry = tk.Entry(self)
+        self.address_entry.grid(row=1, column=1, padx=5, pady=5)
+
+        self.contact_label = tk.Label(self, text="Contact Details:")
+        self.contact_label.grid(row=2, column=0, padx=5, pady=5)
+        self.contact_entry = tk.Entry(self)
+        self.contact_entry.grid(row=2, column=1, padx=5, pady=5)
+
+        self.services_label = tk.Label(self, text="Services Provided:")
+        self.services_label.grid(row=3, column=0, padx=5, pady=5)
+        self.services_entry = tk.Entry(self)
+        self.services_entry.grid(row=3, column=1, padx=5, pady=5)
+
+        self.min_guests_label = tk.Label(self, text="Min Guests:")
+        self.min_guests_label.grid(row=4, column=0, padx=5, pady=5)
+        self.min_guests_entry = tk.Entry(self)
+        self.min_guests_entry.grid(row=4, column=1, padx=5, pady=5)
+
+        self.max_guests_label = tk.Label(self, text="Max Guests:")
+        self.max_guests_label.grid(row=5, column=0, padx=5, pady=5)
+        self.max_guests_entry = tk.Entry(self)
+        self.max_guests_entry.grid(row=5, column=1, padx=5, pady=5)
+
+        self.ok_button = tk.Button(self, text="OK", command=self.ok)
+        self.ok_button.grid(row=6, column=0, columnspan=2, padx=5, pady=10)
+
+    def ok(self):
+        name = self.name_entry.get()
+        address = self.address_entry.get()
+        contact_details = self.contact_entry.get()
+        services_provided = self.services_entry.get()
+        min_guests = self.min_guests_entry.get()
+        max_guests = self.max_guests_entry.get()
+
+        new_supplier_id = str(len(self.parent.suppliers) + 1)
+
+        new_supplier = Supplier(
+            supplier_id=new_supplier_id,
+            name=name,
+            address=address,
+            contact_details=contact_details,
+            services_provided=services_provided,
+            min_guests=min_guests,
+            max_guests=max_guests
+        )
+
+        self.parent.suppliers.append(new_supplier)
+        self.parent.update_supplier_table()
+        self.parent.save_data()
+        self.destroy()
+
+if __name__ == "__main__":
+    app = SupplierManagement()
+    app.mainloop()
