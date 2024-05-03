@@ -14,3 +14,256 @@ class Client:
 class ClientManagement(tk.Tk):
     def __init__(self):
         super().__init__()
+        
+
+    
+            
+    def load_data(self):
+        try:
+            with open("clients.pkl", "rb") as file:
+                
+                if os.path.getsize("clients.pkl") > 0:
+                    self.clients = pickle.load(file)
+                else:
+                    self.clients = [
+                Client("1", "John Doe", "123 Main St", "john@example.com", 5000),
+                Client("2", "Jane Smith", "456 Elm St", "jane@example.com", 8000),
+                Client("3", "Alice Johnson", "789 Oak St", "alice@example.com", 6000)
+            ]
+        except FileNotFoundError:
+            
+            self.clients = [
+                Client("1", "John Doe", "123 Main St", "john@example.com", 5000),
+                Client("2", "Jane Smith", "456 Elm St", "jane@example.com", 8000),
+                Client("3", "Alice Johnson", "789 Oak St", "alice@example.com", 6000)
+            ]
+
+    def save_data(self):
+        with open("clients.pkl", "wb") as file:
+            pickle.dump(self.clients, file)
+
+    def create_widgets(self):
+        self.manage_clients_button = tk.Button(self, text="Manage Clients", command=self.manage_clients)
+        self.manage_clients_button.pack(pady=10)
+
+    def manage_clients(self):
+        self.client_label = tk.Label(self, text="Manage Clients", font=("Helvetica", 14))
+        self.client_label.pack(pady=10)
+
+        self.client_tree = ttk.Treeview(self)
+        self.client_tree["columns"] = ("Client ID", "Name", "Address", "Contact Details", "Budget")
+
+        self.client_tree.column("#0", width=100)
+        self.client_tree.column("Client ID", width=100)
+        self.client_tree.column("Name", width=150)
+        self.client_tree.column("Address", width=200)
+        self.client_tree.column("Contact Details", width=150)
+        self.client_tree.column("Budget", width=100)
+
+        self.client_tree.heading("#0", text="Client Details")
+        self.client_tree.heading("Client ID", text="Client ID")
+        self.client_tree.heading("Name", text="Name")
+        self.client_tree.heading("Address", text="Address")
+        self.client_tree.heading("Contact Details", text="Contact Details")
+        self.client_tree.heading("Budget", text="Budget")
+
+        for client in self.clients:
+            self.client_tree.insert("", tk.END, text=client.name,
+                                    values=(client.client_id, client.name, client.address,
+                                            client.contact_details, client.budget))
+        self.client_tree.pack(fill=tk.BOTH, expand=True, padx=10, pady=10)
+
+        scroll_y = ttk.Scrollbar(self, orient="vertical", command=self.client_tree.yview)
+        scroll_y.pack(side="right", fill="y")
+        self.client_tree.configure(yscrollcommand=scroll_y.set)
+
+        scroll_x = ttk.Scrollbar(self, orient="horizontal", command=self.client_tree.xview)
+        scroll_x.pack(side="bottom", fill="x")
+        self.client_tree.configure(xscrollcommand=scroll_x.set)
+
+        self.add_client_button = tk.Button(self, text="Add Client", command=self.add_client)
+        self.add_client_button.pack(pady=5)
+
+        self.edit_button = tk.Button(self, text="Edit", command=self.edit_selected_client)
+        self.edit_button.pack()
+
+        self.delete_button = tk.Button(self, text="Delete", command=self.delete_client)
+        self.delete_button.pack()
+
+        self.display_client_button = tk.Button(self, text="Display Client Details", command=self.display_client_details)
+        self.display_client_button.pack(pady=5)  # Ajout du bouton Display Client Details
+
+    def add_client(self):
+        dialog = AddClientDialog(self)
+        self.wait_window(dialog)
+
+        new_client = dialog.client
+        if new_client:
+            self.clients.append(new_client)
+            self.update_client_table()
+            self.save_data()
+
+    def edit_selected_client(self):
+        selected_item = self.client_tree.selection()[0]
+        client_id = self.client_tree.item(selected_item, "values")[0]
+        selected_client = next((client for client in self.clients if client.client_id == client_id), None)
+
+        if selected_client:
+            dialog = EditClientDialog(self, selected_client)
+            self.wait_window(dialog)
+
+            edited_client = dialog.client
+            if edited_client:
+                self.client_tree.item(selected_item, text=edited_client.name)
+                self.client_tree.set(selected_item, "Client ID", edited_client.client_id)
+                self.client_tree.set(selected_item, "Name", edited_client.name)
+                self.client_tree.set(selected_item, "Address", edited_client.address)
+                self.client_tree.set(selected_item, "Contact Details", edited_client.contact_details)
+                self.client_tree.set(selected_item, "Budget", edited_client.budget)
+                self.save_data()
+
+    def delete_client(self):
+        selected_item = self.client_tree.selection()[0]
+        client_id = self.client_tree.item(selected_item, "values")[0]
+
+        selected_client = next((client for client in self.clients if client.client_id == client_id), None)
+
+        if selected_client:
+            self.clients.remove(selected_client)
+            self.client_tree.delete(selected_item)
+            self.save_data()
+
+    def update_client_table(self):
+        for item in self.client_tree.get_children():
+            self.client_tree.delete(item)
+
+        for client in self.clients:
+            self.client_tree.insert("", tk.END, text=client.name,
+                                    values=(client.client_id, client.name, client.address,
+                                            client.contact_details, client.budget))
+
+    def display_client_details(self):
+       
+        dialog = tk.Toplevel(self)
+        dialog.title("Enter Client ID")
+
+        label = tk.Label(dialog, text="Enter Client ID:")
+        label.pack(pady=5)
+
+        entry = tk.Entry(dialog)
+        entry.pack(pady=5)
+
+        ok_button = tk.Button(dialog, text="OK", command=lambda: self.get_client_details(entry.get(), dialog))
+        ok_button.pack(pady=5)
+
+    def get_client_details(self, client_id, dialog):
+        
+        selected_client = next((client for client in self.clients if client.client_id == client_id), None)
+
+        if selected_client:
+           
+            details = f"Client ID: {selected_client.client_id}\n"
+            details += f"Name: {selected_client.name}\n"
+            details += f"Address: {selected_client.address}\n"
+            details += f"Contact Details: {selected_client.contact_details}\n"
+            details += f"Budget: {selected_client.budget}\n"
+            tk.messagebox.showinfo("Client Details", details)
+        else:
+            tk.messagebox.showerror("Error", f"Client with ID {client_id} not found.")
+        
+        
+        dialog.destroy()
+
+class EditClientDialog(tk.Toplevel):
+    def __init__(self, parent, client):
+        super().__init__(parent)
+        self.title("Edit Client")
+        self.client = client
+
+        self.name_label = tk.Label(self, text="Name:")
+        self.name_label.grid(row=0, column=0, padx=5, pady=5)
+        self.name_entry = tk.Entry(self)
+        self.name_entry.grid(row=0, column=1, padx=5, pady=5)
+        self.name_entry.insert(tk.END, client.name)
+
+        self.address_label = tk.Label(self, text="Address:")
+        self.address_label.grid(row=1, column=0, padx=5, pady=5)
+        self.address_entry = tk.Entry(self)
+        self.address_entry.grid(row=1, column=1, padx=5, pady=5)
+        self.address_entry.insert(tk.END, client.address)
+
+        self.contact_label = tk.Label(self, text="Contact Details:")
+        self.contact_label.grid(row=2, column=0, padx=5, pady=5)
+        self.contact_entry = tk.Entry(self)
+        self.contact_entry.grid(row=2, column=1, padx=5, pady=5)
+        self.contact_entry.insert(tk.END, client.contact_details)
+
+        self.budget_label = tk.Label(self, text="Budget:")
+        self.budget_label.grid(row=3, column=0, padx=5, pady=5)
+        self.budget_entry = tk.Entry(self)
+        self.budget_entry.grid(row=3, column=1, padx=5, pady=5)
+        self.budget_entry.insert(tk.END, client.budget)
+
+        self.ok_button = tk.Button(self, text="OK", command=self.ok)
+        self.ok_button.grid(row=4, column=0, columnspan=2, padx=5, pady=10)
+
+    def ok(self):
+        self.client.name = self.name_entry.get()
+        self.client.address = self.address_entry.get()
+        self.client.contact_details = self.contact_entry.get()
+        self.client.budget = self.budget_entry.get()
+        self.destroy()
+
+class AddClientDialog(tk.Toplevel):
+    def __init__(self, parent):
+        super().__init__(parent)
+        self.parent = parent
+        self.title("Add Client")
+
+        self.name_label = tk.Label(self, text="Name:")
+        self.name_label.grid(row=0, column=0, padx=5, pady=5)
+        self.name_entry = tk.Entry(self)
+        self.name_entry.grid(row=0, column=1, padx=5, pady=5)
+
+        self.address_label = tk.Label(self, text="Address:")
+        self.address_label.grid(row=1, column=0, padx=5, pady=5)
+        self.address_entry = tk.Entry(self)
+        self.address_entry.grid(row=1, column=1, padx=5, pady=5)
+
+        self.contact_label = tk.Label(self, text="Contact Details:")
+        self.contact_label.grid(row=2, column=0, padx=5, pady=5)
+        self.contact_entry = tk.Entry(self)
+        self.contact_entry.grid(row=2, column=1, padx=5, pady=5)
+
+        self.budget_label = tk.Label(self, text="Budget:")
+        self.budget_label.grid(row=3, column=0, padx=5, pady=5)
+        self.budget_entry = tk.Entry(self)
+        self.budget_entry.grid(row=3, column=1, padx=5, pady=5)
+
+        self.ok_button = tk.Button(self, text="OK", command=self.ok)
+        self.ok_button.grid(row=4, column=0, columnspan=2, padx=5, pady=10)
+
+    def ok(self):
+        name = self.name_entry.get()
+        address = self.address_entry.get()
+        contact_details = self.contact_entry.get()
+        budget = self.budget_entry.get()
+
+        new_client_id = str(len(self.parent.clients) + 1)
+
+        new_client = Client(
+            client_id=new_client_id,
+            name=name,
+            address=address,
+            contact_details=contact_details,
+            budget=budget
+        )
+
+        self.parent.clients.append(new_client)
+        self.parent.update_client_table()
+        self.parent.save_data()
+        self.destroy()
+
+if __name__ == "__main__":
+    app = ClientManagement()
+    app.mainloop()
